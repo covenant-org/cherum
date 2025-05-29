@@ -42,9 +42,14 @@ def create_app(test_config=None):
     @app.route('/', methods=["GET", "POST"])
     def index():
         last_connection = "Never"
-        comand_q = db.get().execute(
+        last_command = ""
+        command_q = db.get().execute(
             "SELECT command FROM commands ORDER BY created_at DESC LIMIT 1"
         ).fetchone()
+
+        if command_q is not None:
+            last_command = command_q[0]
+
         conn_q = db.get().execute(
             "SELECT created_at FROM pings ORDER BY created_at DESC LIMIT 1"
         ).fetchone()
@@ -61,7 +66,7 @@ def create_app(test_config=None):
             )
             last_connection = last_connection.astimezone(central_mexico_tz) \
                 .strftime("%d/%m/%Y %H:%M:%S")
-        return render_template("index.html", last_connection=last_connection, last_command=comand_q[0])
+        return render_template("index.html", last_connection=last_connection, last_command=last_command)
 
     @app.route('/last/connection')
     def last_connection():
@@ -100,7 +105,10 @@ def create_app(test_config=None):
         query = db.get().execute(
             "SELECT * FROM commands ORDER BY created_at DESC LIMIT 1"
         ).fetchone()
-        response = {"id": query[0], "command": query[1], "done": query[2]}
+        if query is None:
+            response = {"id": None, "command": "", "done": 1}
+        else:
+            response = {"id": query[0], "command": query[1], "done": query[2]}
         query = db.get().execute(
             "INSERT INTO pings (created_at) VALUES (CURRENT_TIMESTAMP)"
         )
