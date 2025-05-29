@@ -61,7 +61,6 @@
             fetch("/last/connection").then(res => res.text())
                 .then(res => {
                     const date = new Date(res.replace(" ", "T"))
-                    console.log(date)
                     status.style.backgroundColor = date < new Date() - 10000 ? "red" : "green"
                     lastConnection.textContent = res
                 })
