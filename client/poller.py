@@ -2,6 +2,7 @@ import os
 from time import sleep
 import requests
 import argparse
+from utils import makepipe
 
 
 def poll(url, token, on_error="loiter"):
@@ -22,16 +23,6 @@ def mark_done(url, token, id):
     ).json()
 
 
-def makepipe(name):
-    try:
-        os.mkfifo(name)
-    except FileExistsError:
-        pass
-    except OSError:
-        print("Failed to create pipe")
-        exit(1)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-u", "--url", default="http://localhost:5000")
@@ -42,7 +33,7 @@ def main():
     token = os.environ.get("TOKEN")
     makepipe(args.pipe)
     while True:
-        sleep(0.5)
+        sleep(0.2)
         res = poll(args.url, token, args.on_error)
         print(res)
         if res["done"]:

@@ -1,0 +1,52 @@
+services:
+  server:
+    build:
+      context: server 
+    hostname: server.cherum
+    name: cherum
+    restart: always
+    healthcheck:
+      test: python3 -c "import requests; exit(0) if requests.get('http://localhost/healthcheck') else exit(1)"
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      - influxdb
+    ports:
+      - 8083:80
+    volumes:
+      - cherum-instance:/app/instance
+    environment:
+      - CONTAINER=docker
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+    labels:
+      - "autoheal=true"
+      - homepage.group=teleop
+      - homepage.showStats=true
+      - homepage.name=Cherum
+      - homepage.name=https://cherum.covenant.space
+      - homepage.decription=Remote drone observation system
+
+  influxdb:
+    image: influxdb:3-core
+    restart: always
+    hostname: influxdb
+    name: influxdb
+    ports:
+      - 8086:8086
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=covenant
+      - DOCKER_INFLUXDB_INIT_BUCKET=telemetry
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_ADMIN_TOKEN}
+    volumes:
+      - cherum-data:/var/lib/influxdb2
+      - cherum-config:/etc/influxdb2
+
+volumes:
+  cherum-instance:
+  cherum-config:
+  cherum-data:
