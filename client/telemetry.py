@@ -22,12 +22,14 @@ def main():
 
     token = os.environ.get("TOKEN")
     while True:
-        sleep(0.5)
         with open(args.pipe, "r") as f:
             try:
-                line = f.readline(2048)
-                if line:
-                    send_msg(args.url, line, token)
+                i = 0
+                while i < 100:
+                    line = f.readline(2048)
+                    i += 1
+                    if line:
+                        send_msg(args.url, line, token)
             except Exception as e:
                 print(e)
 

@@ -33,7 +33,7 @@ def main():
     token = os.environ.get("TOKEN")
     makepipe(args.pipe)
     while True:
-        sleep(0.2)
+        sleep(0.1)
         res = poll(args.url, token, args.on_error)
         print(res)
         if res["done"]:

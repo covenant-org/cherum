@@ -12,6 +12,7 @@ class TelemetryStore:
                  bucket: str = "drone_telemetry"):
         self.client = InfluxDBClient(url=url, token=token, org=org)
         self.write_api = self.client.write_api(write_options=ASYNCHRONOUS)
+        self.query_api = self.client.query_api()
         self.bucket = bucket
         self.org = org
 
@@ -21,8 +22,119 @@ class TelemetryStore:
         self.last_flush = datetime.now()
         self.flush_interval = 5  # Flush every 5 seconds
 
-    async def store_position(self, lat: float, lon: float, alt: float,
-                             drone_id: str = "default"):
+    async def last_position(self, drone_id: str = "default"):
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: -24h)
+          |> filter(fn: (r) => r["_measurement"] == "position")
+          |> filter(fn: (r) => r["drone_id"] == "{drone_id}")
+          |> last()
+          |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+        '''
+
+        result = self.query_api.query(org=self.org, query=query)
+        for table in result:
+            for record in table.records:
+                return {
+                    'time': record.get_time(),
+                    'latitude': record.values.get('latitude'),
+                    'longitude': record.values.get('longitude'),
+                    'altitude': record.values.get('altitude')
+                }
+        return None
+
+    async def last_battery(self, drone_id: str = "default"):
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: -24h)
+          |> filter(fn: (r) => r["_measurement"] == "battery")
+          |> filter(fn: (r) => r["drone_id"] == "{drone_id}")
+          |> last()
+        '''
+
+        result = self.query_api.query(org=self.org, query=query)
+        for table in result:
+            for record in table.records:
+                return {
+                    'time': record.get_time(),
+                    'percentage': record.get_value()
+                }
+
+        return None
+
+    async def last_flight_mode(self, drone_id: str = "default"):
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: -24h)
+          |> filter(fn: (r) => r["_measurement"] == "flight_mode")
+          |> filter(fn: (r) => r["drone_id"] == "{drone_id}")
+          |> last()
+        '''
+
+        result = self.query_api.query(org=self.org, query=query)
+        for table in result:
+            for record in table.records:
+                return {
+                    'time': record.get_time(),
+                    'mode': record.get_value()
+                }
+        return None
+
+    async def last_armed(self, drone_id: str = "default"):
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: -24h)
+          |> filter(fn: (r) => r["_measurement"] == "armed")
+          |> filter(fn: (r) => r["drone_id"] == "{drone_id}")
+          |> last()
+        '''
+
+        result = self.query_api.query(org=self.org, query=query)
+        for table in result:
+            for record in table.records:
+                return {
+                    'time': record.get_time(),
+                    'armed': record.get_value()
+                }
+        return None
+
+    async def last_in_air(self, drone_id: str = "default"):
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: -24h)
+          |> filter(fn: (r) => r["_measurement"] == "in_air")
+          |> filter(fn: (r) => r["drone_id"] == "{drone_id}")
+          |> last()
+        '''
+
+        result = self.query_api.query(org=self.org, query=query)
+        for table in result:
+            for record in table.records:
+                return {
+                    'time': record.get_time(),
+                    'in_air': record.get_value()
+                }
+        return None
+
+    async def store_armed(self, armed: bool, drone_id: str = "default"):
+        """Store armed change state"""
+        point = Point("armed") \
+            .tag("drone_id", drone_id) \
+            .field("armed", armed)
+
+        self.buffer.append(point)
+        await self._check_flush()
+
+    async def store_in_air(self, in_air: bool, drone_id: str = "default"):
+        """Store in_air change state"""
+        point = Point("in_air") \
+            .tag("drone_id", drone_id) \
+            .field("in_air", in_air)
+
+        self.buffer.append(point)
+        await self._check_flush()
+
+    async def store_position(self, lat: float, lon: float, alt: float, drone_id: str = "default"):
         """Store position data with automatic batching."""
         point = Point("position") \
             .tag("drone_id", drone_id) \
@@ -135,7 +247,7 @@ class TelemetryStore:
 
         return positions
 
-    async def close(self):
+    async def close(self, e=None):
         """Clean up resources."""
         await self.flush()
         self.client.close()

@@ -1,9 +1,10 @@
-import os
-import datetime
-import cherum.db as db
-import cherum.jwt as jwt
-from flask import Flask, render_template, request, redirect, jsonify
 from cherum.telemetry_store import TelemetryStore
+from flask import Flask, render_template, request, redirect, jsonify
+import cherum.jwt as jwt
+import cherum.db as db
+import datetime
+import os
+import asyncio
 
 central_mexico_utc_offset = datetime.timedelta(hours=-6)
 central_mexico_tz = datetime.timezone(central_mexico_utc_offset)
@@ -23,7 +24,6 @@ def create_app(test_config=None):
         INFLUXDB_BUCKET='telemetry'
     )
     app.teardown_appcontext(db.close)
-    app.teardown_appcontext()
     app.cli.add_command(db.init_db_command)
     app.cli.add_command(jwt.create_token_command)
 
@@ -83,6 +83,11 @@ def create_app(test_config=None):
                 last_connection.second,
                 tzinfo=utc_tz
             )
+
+            inactivity = datetime.datetime.now(utc_tz) - last_connection
+            if inactivity.seconds > 10:
+                last_command = None
+
             last_connection = last_connection.astimezone(central_mexico_tz) \
                 .strftime("%d/%m/%Y %H:%M:%S")
         return render_template("index.html", last_connection=last_connection, last_command=last_command)
@@ -145,6 +150,25 @@ def create_app(test_config=None):
         db.get().commit()
         return {"id": id}
 
+    @app.route('/last/telemetry', methods=["GET"])
+    async def last_telemetry():
+        drone_id = request.args.get('drone_id', 'default')
+        tasks = [
+            asyncio.create_task(telemetry_store.last_position(drone_id)),
+            asyncio.create_task(telemetry_store.last_battery(drone_id)),
+            asyncio.create_task(telemetry_store.last_flight_mode(drone_id)),
+            asyncio.create_task(telemetry_store.last_armed(drone_id)),
+            asyncio.create_task(telemetry_store.last_in_air(drone_id))
+        ]
+        results = await asyncio.gather(*tasks)
+        return {
+            "position": results[0],
+            "battery": results[1],
+            "flight_mode": results[2],
+            "armed": results[3],
+            "in_air": results[4]
+        }
+
     @app.route('/telemetry', methods=["POST", "GET"])
     async def telemetry():
         if request.method == "GET":
@@ -180,6 +204,7 @@ def create_app(test_config=None):
                     )
 
                 elif data['type'] == 'battery':
+                    print("battery")
                     bat_data = data['data']
                     await telemetry_store.store_battery(
                         battery_id=bat_data['id'],
@@ -193,6 +218,14 @@ def create_app(test_config=None):
                         mode=mode_data['mode'],
                         drone_id=drone_id
                     )
+
+                elif data['type'] == 'armed':
+                    armed = data['armed']
+                    await telemetry_store.store_armed(armed, drone_id)
+
+                elif data['type'] == 'in_air':
+                    in_air = data['in_air']
+                    await telemetry_store.store_in_air(in_air, drone_id)
 
             return {"status": "received"}, 200
 

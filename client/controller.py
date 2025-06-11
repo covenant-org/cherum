@@ -27,15 +27,29 @@ async def read_pipe(pipe_path: str, command_queue: asyncio.Queue):
             await asyncio.sleep(0.1)
 
 
-async def pub_telemetry(pipe_path: str, telemetry_queue: asyncio.Queue):
+async def queue_parser(telemetry_queue: asyncio.Queue, json_queue: asyncio.Queue):
     while True:
         msg = await telemetry_queue.get()
         msg = json.dumps(msg)
+        await json_queue.put(msg)
+        telemetry_queue.task_done()
+
+
+async def pub_telemetry(pipe_path: str, json_queue: asyncio.Queue):
+    while True:
         fd = None
+        if json_queue.empty():
+            await asyncio.sleep(0.5)
+            continue
         try:
             fd = os.open(pipe_path, os.O_WRONLY | os.O_NONBLOCK)
-            os.write(fd, msg.encode())
-            os.write(fd, "\n".encode())
+            i = 0
+            while not json_queue.empty() and i < 100:
+                msg = json_queue.get_nowait()
+                os.write(fd, msg.encode())
+                os.write(fd, "\n".encode())
+                i += 1
+                json_queue.task_done()
         except Exception as e:
             if e.args[0] == errno.ENXIO:
                 await asyncio.sleep(0.5)
@@ -44,6 +58,24 @@ async def pub_telemetry(pipe_path: str, telemetry_queue: asyncio.Queue):
         finally:
             if fd:
                 os.close(fd)
+
+
+async def monitor_armed(drone: System, queue: asyncio.Queue):
+    """Monitor armed status."""
+    async for msg in drone.telemetry.armed():
+        await queue.put({
+            "type": "armed",
+            "armed": msg
+        })
+
+
+async def monitor_in_air(drone: System, queue: asyncio.Queue):
+    """Monitor if drone is in the air"""
+    async for msg in drone.telemetry.in_air():
+        await queue.put({
+            "type": "in_air",
+            "in_air": msg
+        })
 
 
 async def monitor_position(drone: System, queue: asyncio.Queue):
@@ -111,6 +143,7 @@ async def main():
     makepipe(args.telemetry_pipe)
     command_queue = asyncio.Queue()
     telemetry_queue = asyncio.Queue()
+    json_queue = asyncio.Queue()
 
     drone = System()
     print("Waiting for drone to connect...")
@@ -127,9 +160,13 @@ async def main():
         asyncio.create_task(monitor_position(drone, telemetry_queue)),
         asyncio.create_task(monitor_battery(drone, telemetry_queue)),
         asyncio.create_task(monitor_mode(drone, telemetry_queue)),
+        asyncio.create_task(monitor_in_air(drone, telemetry_queue)),
+        asyncio.create_task(monitor_armed(drone, telemetry_queue)),
         asyncio.create_task(process_commands(drone, command_queue)),
+        asyncio.create_task(queue_parser(
+            telemetry_queue, json_queue)),
         asyncio.create_task(pub_telemetry(
-            args.telemetry_pipe, telemetry_queue)),
+            args.telemetry_pipe, json_queue)),
     ]
 
     try:

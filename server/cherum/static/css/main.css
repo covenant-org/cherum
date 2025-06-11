@@ -1,0 +1,178 @@
+/* Main styles for Cherum drone control interface */
+
+:root {
+  --pico-font-family: system-ui, -apple-system, "Segoe UI", "Roboto", "Ubuntu", "Cantarell", "Noto Sans", sans-serif;
+}
+
+/* Status indicator */
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 0 0.5rem;
+  animation: pulse 2s infinite;
+  transition: background-color 0.3s ease;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Dark mode status colors */
+.status-connected {
+  background-color: #81c784;
+}
+
+.status-disconnected {
+  background-color: #e57373;
+}
+
+.control-buttons button {
+  font-size: 1.125rem;
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.control-buttons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.control-buttons button:active {
+  transform: translateY(0);
+}
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  background-color: var(--pico-secondary-background);
+  margin-top: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+/* Battery indicator */
+.battery-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  transition: opacity 0.3s ease;
+}
+
+.battery-low {
+  color: #f44336;
+}
+
+.battery-medium {
+  color: #ff9800;
+}
+
+.battery-good {
+  color: #4caf50;
+}
+
+/* Status badges */
+.armed-status,
+.air-status {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.status-active {
+  background-color: #1b5e20;
+  color: #c8e6c9;
+}
+
+.status-inactive {
+  background-color: #424242;
+  color: #bdbdbd;
+}
+
+/* Loading states */
+.skeleton {
+  animation: skeleton-loading 1s linear infinite alternate;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-color: var(--pico-secondary-background);
+  }
+
+  100% {
+    background-color: var(--pico-secondary-border);
+  }
+}
+
+/* Error states */
+.error-message {
+  color: #f44336;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: rgba(244, 67, 54, 0.1);
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+[data-theme="dark"] .error-message {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #ef5350;
+}
+
+/* Leaflet overrides for dark mode */
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+.leaflet-control-zoom a {
+  padding: 0;
+  border-radius: 0;
+}
+
+[data-theme="dark"] .leaflet-control-zoom a,
+[data-theme="dark"] .leaflet-control-attribution {
+  background-color: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .leaflet-control-zoom a:hover {
+  background-color: #2e2e2e !important;
+}
+
+/* Drone marker styles */
+.drone-marker {
+  background-color: rgba(100, 150, 210, 0.2);
+  backdrop-filter: blur(3px);
+  border-radius: 50%;
+  border-width: 2.5px;
+}
+
+.drone-marker-armed {
+  background-color: rgba(210, 150, 150, 0.2);
+}
+
+/* Trajectory line styles */
+.leaflet-interactive.trajectory-line {
+  stroke: #2196f3;
+  stroke-width: 3;
+  stroke-opacity: 0.8;
+}
