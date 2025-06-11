@@ -24,11 +24,6 @@
           <span id="status" class="status-indicator status-disconnected"></span>
           <span id="last-connection">{{ last_connection }}</span>
         </div>
-        {% if last_command %}
-        <p style="margin-top: 1rem; opacity: 0.8;">
-          Último comando: <span class="last-command">{{ last_command }}</span>
-        </p>
-        {% endif %}
       </hgroup>
     </center>
     <div id="error-container" class="error-message" style="display: none;"></div>

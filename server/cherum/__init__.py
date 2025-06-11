@@ -61,13 +61,6 @@ def create_app(test_config=None):
     @app.route('/', methods=["GET"])
     def index():
         last_connection = "Never"
-        last_command = ""
-        command_q = db.get().execute(
-            "SELECT command FROM commands ORDER BY created_at DESC LIMIT 1"
-        ).fetchone()
-
-        if command_q is not None:
-            last_command = command_q[0]
 
         conn_q = db.get().execute(
             "SELECT created_at FROM pings ORDER BY created_at DESC LIMIT 1"
@@ -90,7 +83,7 @@ def create_app(test_config=None):
 
             last_connection = last_connection.astimezone(central_mexico_tz) \
                 .strftime("%d/%m/%Y %H:%M:%S")
-        return render_template("index.html", last_connection=last_connection, last_command=last_command)
+        return render_template("index.html", last_connection=last_connection)
 
     @app.route('/last/connection')
     def last_connection():
@@ -204,7 +197,6 @@ def create_app(test_config=None):
                     )
 
                 elif data['type'] == 'battery':
-                    print("battery")
                     bat_data = data['data']
                     await telemetry_store.store_battery(
                         battery_id=bat_data['id'],
