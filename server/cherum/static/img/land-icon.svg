@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Downward arrow -->
+    <path d="M 12 3 L 12 17"/>
+    
+    <!-- Arrow head -->
+    <path d="M 12 17 L 7 12 L 12 17 L 17 12"/>
+    
+    <!-- Ground line -->
+    <path d="M 4 20 L 20 20"/>
+    
+    <!-- Landing pad markers -->
+    <path d="M 8 20 L 8 22"/>
+    <path d="M 16 20 L 16 22"/>
+  </g>
+</svg>

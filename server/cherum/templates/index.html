@@ -34,15 +34,15 @@
       <h3>Controles de Emergencia</h3>
       <div class="grid">
         <button name="command" value="loiter" class="{{ 'primary' if last_command == 'loiter' else 'secondary' }}">
-          <span class="command-icon">🔄</span>
+          <img src="{{ url_for('static', filename='img/loiter-icon.svg') }}" alt="Loiter" width="24" height="24" style="vertical-align: middle; margin-right: 8px;">
           Mantener Posición (Loiter)
         </button>
         <button name="command" value="land" class="{{ 'primary' if last_command == 'land' else 'secondary' }}">
-          <span class="command-icon">⬇️</span>
+          <img src="{{ url_for('static', filename='img/land-icon.svg') }}" alt="Land" width="24" height="24" style="vertical-align: middle; margin-right: 8px;">
           Aterrizar
         </button>
         <button name="command" value="rtl" class="{{ 'primary' if last_command == 'rtl' else 'secondary' }}">
-          <span class="command-icon">🏠</span>
+          <img src="{{ url_for('static', filename='img/rtl-icon.svg') }}" alt="RTL" width="24" height="24" style="vertical-align: middle; margin-right: 8px;">
           Regresar a Casa (RTL)
         </button>
       </div>

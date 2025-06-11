@@ -58,6 +58,19 @@
   transform: translateY(0);
 }
 
+/* Button icon styles */
+button img[src*=".svg"] {
+  filter: brightness(0) invert(1); /* Makes SVG white on dark buttons */
+}
+
+button.secondary img[src*=".svg"] {
+  filter: none; /* Default color for secondary buttons */
+}
+
+[data-theme="dark"] button.secondary img[src*=".svg"] {
+  filter: brightness(0) invert(0.8); /* Light gray for dark mode */
+}
+
 .connection-status {
   display: inline-flex;
   align-items: center;
