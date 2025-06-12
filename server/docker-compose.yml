@@ -17,6 +17,7 @@ services:
       - cherum-instance:/app/instance
     environment:
       - CONTAINER=docker
+      - SECRET_KEY=${SECRET_KEY}
       - INFLUXDB_URL=http://influxdb:8086
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
     labels:
