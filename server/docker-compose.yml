@@ -1,7 +1,8 @@
+name: cherum
 services:
   server:
     build:
-      context: server 
+      context: .
     hostname: server.cherum
     restart: always
     healthcheck:
