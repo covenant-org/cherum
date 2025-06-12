@@ -6,7 +6,7 @@ services:
     hostname: server.cherum
     restart: always
     healthcheck:
-      test: python3 -c "import requests; exit(0) if requests.get('http://localhost/healthcheck') else exit(1)"
+      test: timeout 5s curl --fail http://localhost/health || exit 1
       interval: 10s
       timeout: 10s
       retries: 5
@@ -23,11 +23,12 @@ services:
       - INFLUXDB_URL=http://influxdb:8086
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
     labels:
-      - "autoheal=true"
-      - homepage.group=teleop
+      - autoheal=True
+      - homepage.group=Teleop
       - homepage.showStats=true
       - homepage.name=Cherum
-      - homepage.name=https://cherum.covenant.space
+      - homepage.icon=/icons/covenant.jpeg
+      - homepage.href=https://cherum.covenant.space
       - homepage.decription=Remote drone observation system
 
   influxdb:
