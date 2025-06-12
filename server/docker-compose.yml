@@ -11,7 +11,8 @@ services:
       timeout: 10s
       retries: 5
     depends_on:
-      - influxdb
+      influxdb:
+        condition: service_healthy
     ports:
       - 8083:80
     volumes:
@@ -33,6 +34,20 @@ services:
     image: influxdb:2
     restart: always
     hostname: influxdb
+    healthcheck:
+      test: "curl --request POST \
+        http://localhost:8086/api/v2/query?orgID=covenant  \
+        --header 'Authorization: Token ${INFLUXDB_TOKEN}' \
+        --header 'Accept: application/csv' \
+        --header 'Content-type: application/vnd.flux' \
+        --data 'from(bucket:\"telemetry\")
+              |> range(start: -12h)
+              |> filter(fn: (r) => r._measurement == \"position\")
+              |> aggregateWindow(every: 1h, fn: mean)'
+      "
+      interval: 5s
+      timeout: 10s
+      retries: 5
     ports:
       - 8086:8086
     environment:
