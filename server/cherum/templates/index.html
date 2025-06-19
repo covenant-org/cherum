@@ -61,6 +61,7 @@
 
         #canvas {
             background: transparent;
+            // background: red;
         }
 
         #fps-meter {
@@ -204,7 +205,7 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module">
     let net = null;
-    const modelInputSize = 416;
+    const modelInputSize = 640;
     let lastCalledTime;
     let fps = 0, accumFps = 0, frameCounter = 0;
 
@@ -244,11 +245,12 @@
       await peerConnection.setRemoteDescription(sdi)
     }
 
-    requestAnimationFrame(processFrame);
+          requestAnimationFrame(processFrame);
 
 
      async function processFrame() {
-            if (video.videoWidth == 0 || video.videoHeight == 0) {
+            if (video.videoWidth == 0 || video.videoHeight == 0 || video.readyState < 2) {
+                console.log("Video not ready - width:", video.videoWidth, "height:", video.videoHeight, "readyState:", video.readyState);
                 requestAnimationFrame(processFrame);
                 return;
             }
@@ -283,10 +285,13 @@
 
             const offsetX = (modelInputSize - targetWidth) / 2;
             const offsetY = (modelInputSize - targetHeight) / 2;
-            offscreenContext.clearRect(0, 0, modelInputSize, modelInputSize);
+            offscreenContext.fillRect(0, 0, modelInputSize, modelInputSize);
             offscreenContext.drawImage(video, offsetX, offsetY, targetWidth, targetHeight);
             const boxes = await detectObjectsOnFrame(offscreenContext);
-            drawBoxes(offscreenCanvas, boxes, targetWidth, targetHeight, offsetX, offsetY);
+            const validBoxes = [];
+            for (let i = 0; i < boxes.length; i += 6)
+                if (boxes[i + 4] > 0) validBoxes.push([boxes[i], boxes[i + 1], boxes[i + 2], boxes[i + 3], boxes[i + 5]]);
+            drawBoxes(offscreenCanvas, validBoxes, targetWidth, targetHeight, offsetX, offsetY);
             requestAnimationFrame(processFrame);
         }
 
@@ -299,8 +304,8 @@
             const scaleX = canvas.width / targetWidth;
             const scaleY = canvas.height / targetHeight;
 
-            boxes.forEach(([x1, y1, x2, y2, label]) => {
-                const classIndex = yolo_classes.indexOf(label);
+            boxes.forEach(([x1, y1, x2, y2, classIndex]) => {
+                const label = yolo_classes[classIndex];
                 const color = classColors[classIndex];
                 ctx.strokeStyle = color;
                 ctx.fillStyle = color;
@@ -330,13 +335,27 @@
             }
             let start = performance.now();
             const [input,img_width,img_height] = await prepareInput(offscreenContext);
-            console.log("Preprocess took: " + (performance.now() - start) + " ms");
+            const preprocessTime = performance.now() - start;
+
             start = performance.now();
             const output = await net(new Float32Array(input));
-            console.log("Inference took: " + (performance.now() - start) + " ms");
+            const inferenceTime = performance.now() - start;
+
+            return output[0];
+
             start = performance.now();
             let out = processOutput(output[0],img_width,img_height);
-            console.log("Postprocess took: " + (performance.now() - start) + " ms");
+            const postprocessTime = performance.now() - start;
+
+            if (frameCounter % 60 === 0) {
+                console.log("Inference took:", inferenceTime.toFixed(2), "ms");
+                console.log("Postprocess took:", postprocessTime.toFixed(2), "ms");
+                console.log("Detected boxes:", out.length);
+                if (out.length > 0) {
+                    console.log("First detection:", out[0]);
+                }
+            }
+
             return out;
         }
 
@@ -346,6 +365,15 @@
                 const imgData = offscreenContext.getImageData(0,0,modelInputSize,modelInputSize);
                 const pixels = imgData.data;
                 const red = [], green = [], blue = [];
+
+                // Debug: Check if we're getting actual image data
+                let hasNonZeroPixels = false;
+                for (let i = 0; i < Math.min(100, pixels.length); i += 4) {
+                    if (pixels[i] > 0 || pixels[i+1] > 0 || pixels[i+2] > 0) {
+                        hasNonZeroPixels = true;
+                        break;
+                    }
+                }
 
                 for (let index=0; index<pixels.length; index+=4) {
                     red.push(pixels[index]/255.0);
@@ -367,11 +395,11 @@
             let boxes = [];
             const numPredictions = Math.pow(modelInputSize/32, 2) * 21;
             for (let index=0;index<numPredictions;index++) {
-                const [class_id,prob] = [...Array(80).keys()]
+                const [class_id,prob] = [...Array(yolo_classes.length).keys()]
                     .map(col => [col, output[numPredictions*(col+4)+index]])
                     .reduce((accum, item) => item[1]>accum[1] ? item : accum,[0,0]);
 
-                if (prob < 0.25) continue;
+                // if (prob < 0.15) continue; // Lower threshold to see if we get any detections
                 const label = yolo_classes[class_id];
                 const xc = output[index];
                 const yc = output[numPredictions+index];
@@ -428,7 +456,13 @@
         }
 
         const classColors = generateColors(yolo_classes.length);
-    main()
+    // Wait for DOM to be ready before starting
+    window.addEventListener('load', () => {
+        console.log("Starting WebRTC connection...");
+        main().catch(err => {
+            console.error("Error initializing WebRTC:", err);
+        });
+    });
   </script>
 </body>
 
