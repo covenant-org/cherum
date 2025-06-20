@@ -203,7 +203,7 @@ button.secondary img[src*=".svg"] {
   justify-content: center;
 }
 
-#video,
+#remote,
 #canvas {
   position: absolute;
   top: 0;
