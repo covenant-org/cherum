@@ -21,7 +21,8 @@ def create_app(test_config=None):
         INFLUXDB_URL='http://localhost:8086',
         INFLUXDB_TOKEN='dev',
         INFLUXDB_ORG='covenant',
-        INFLUXDB_BUCKET='telemetry'
+        INFLUXDB_BUCKET='telemetry',
+        VIDEO_URL='http://localhost:8889/mystream/whep'
     )
     app.teardown_appcontext(db.close)
     app.cli.add_command(db.init_db_command)
@@ -83,7 +84,7 @@ def create_app(test_config=None):
 
             last_connection = last_connection.astimezone(central_mexico_tz) \
                 .strftime("%d/%m/%Y %H:%M:%S")
-        return render_template("index.html", last_connection=last_connection)
+        return render_template("index.html", last_connection=last_connection, video_url=app.config["VIDEO_URL"])
 
     @app.route('/last/connection')
     def last_connection():
